@@ -24,7 +24,7 @@ func NewMemStorage() *MemStorage {
 }
 
 type Config struct {
-	ListenUri string
+	ListenURI string
 }
 
 var storage *MemStorage
@@ -32,11 +32,11 @@ var storage *MemStorage
 func main() {
 	storage = NewMemStorage()
 
-	config := Config{ListenUri: ":8080"}
+	config := Config{ListenURI: ":8080"}
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/update/", handleMetric)
-	err := http.ListenAndServe(config.ListenUri, mux)
+	err := http.ListenAndServe(config.ListenURI, mux)
 	if err != nil {
 		panic(err)
 	}
@@ -48,10 +48,10 @@ func handleMetric(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if r.Header.Get("Content-Type") != `text/plain` {
+	/*if r.Header.Get("Content-Type") != `text/plain` {
 		http.Error(w, "Wrong content-type", http.StatusBadRequest)
 		return
-	}
+	}*/
 
 	metricType := ""
 
