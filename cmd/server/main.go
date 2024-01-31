@@ -1,8 +1,6 @@
 package main
 
 import (
-	"fmt"
-	"io"
 	"net/http"
 	"strconv"
 	"strings"
@@ -10,10 +8,19 @@ import (
 )
 
 type MemStorage struct {
-	GaugeMutex   sync.RWMutex
-	CounterMutex sync.RWMutex
+	GaugeMutex   *sync.RWMutex
+	CounterMutex *sync.RWMutex
 	Gauges       map[string]float64
 	Counters     map[string]int64
+}
+
+func NewMemStorage() *MemStorage {
+	storage := new(MemStorage)
+	storage.Gauges = make(map[string]float64)
+	storage.Counters = make(map[string]int64)
+	storage.GaugeMutex = new(sync.RWMutex)
+	storage.CounterMutex = new(sync.RWMutex)
+	return storage
 }
 
 type Config struct {
@@ -23,16 +30,7 @@ type Config struct {
 var storage *MemStorage
 
 func main() {
-	storage = new(MemStorage)
-	storage.Gauges = map[string]float64{
-		"gauge1": 0.0,
-		"gauge2": 0.0,
-	}
-
-	storage.Counters = map[string]int64{
-		"counter1": 0,
-		"counter2": 0,
-	}
+	storage = NewMemStorage()
 
 	config := Config{ListenUri: ":8080"}
 
@@ -42,29 +40,6 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-}
-
-func handleGauge(w http.ResponseWriter, r *http.Request, metric string, valueStr string) {
-
-	value, err := strconv.ParseFloat(valueStr, 64)
-
-	if err != nil {
-		http.Error(w, "Invalid parameter value", http.StatusBadRequest)
-		return
-	}
-
-	storage.GaugeMutex.Lock()
-
-	if _, ok := storage.Gauges[metric]; !ok {
-		http.Error(w, "Invalid gaguge name", http.StatusBadRequest)
-		return
-	}
-
-	storage.Gauges[metric] = value
-
-	storage.GaugeMutex.Unlock()
-
-	w.WriteHeader(http.StatusOK)
 }
 
 func handleMetric(w http.ResponseWriter, r *http.Request) {
@@ -78,33 +53,33 @@ func handleMetric(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fmt.Println(r.URL.Path)
-
 	metricType := ""
 
-	path, ok := strings.CutPrefix(r.URL.Path, "/update/counter/")
+	path, ok := strings.CutPrefix(r.URL.Path, "/update/counter")
 	if ok {
 		metricType = "counter"
-	} else {
-		path, ok = strings.CutPrefix(r.URL.Path, "/update/gauge/")
-		if ok {
-			metricType = "gauge"
-		}
+	} else if path, ok = strings.CutPrefix(r.URL.Path, "/update/gauge"); ok {
+		metricType = "gauge"
 	}
+
+	path, _ = strings.CutPrefix(path, "/")
 
 	if metricType == "" {
 		http.Error(w, "Bad Metric Type", http.StatusBadRequest)
 		return
 	}
 
-	fmt.Println(path)
 	fragments := strings.Split(path, "/")
+
+	if len(fragments) == 0 || len(fragments) == 1 && fragments[0] == "" {
+		http.Error(w, "Metric not found", http.StatusNotFound)
+		return
+	}
+
 	if len(fragments) != 2 {
 		http.Error(w, "Invalid request", http.StatusBadRequest)
 		return
 	}
-
-	fmt.Println(fragments)
 
 	metric := fragments[0]
 
@@ -137,17 +112,25 @@ func handleCounter(w http.ResponseWriter, r *http.Request, metric string, valueS
 	storage.CounterMutex.Lock()
 
 	if _, ok := storage.Counters[metric]; !ok {
-		http.Error(w, "Invalid counter name", http.StatusBadRequest)
-		return
+		storage.Counters[metric] = 0
 	}
 
 	storage.Counters[metric] += value
-
 	storage.CounterMutex.Unlock()
-
 	w.WriteHeader(http.StatusOK)
+}
 
-	storage.CounterMutex.RLock()
-	io.WriteString(w, fmt.Sprintf("%v", storage.Counters[metric]))
-	storage.CounterMutex.RUnlock()
+func handleGauge(w http.ResponseWriter, r *http.Request, metric string, valueStr string) {
+
+	value, err := strconv.ParseFloat(valueStr, 64)
+
+	if err != nil {
+		http.Error(w, "Invalid parameter value", http.StatusBadRequest)
+		return
+	}
+
+	storage.GaugeMutex.Lock()
+	storage.Gauges[metric] = value
+	storage.GaugeMutex.Unlock()
+	w.WriteHeader(http.StatusOK)
 }
