@@ -47,8 +47,8 @@ func handleCounterFunc(storage repository) func (w http.ResponseWriter, r *http.
 	
 		metric, valueStr, err := extractMetricAndValue(path)
 		if err != nil {
-			if err, ok := err.(HandleError); ok {
-				http.Error(w, err.Error(), err.Status())
+			if err1, ok := err.(HandleError); ok {
+				http.Error(w, err1.Error(), err1.Status())
 				return
 			} else {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -85,8 +85,8 @@ func handleGaugeFunc(storage repository) func (w http.ResponseWriter, r *http.Re
 	
 		metric, valueStr, err := extractMetricAndValue(path)
 		if err != nil {
-			if err, ok := err.(HandleError); ok {
-				http.Error(w, err.Error(), err.Status())
+			if err1, ok := err.(HandleError); ok {
+				http.Error(w, err1.Error(), err1.Status())
 				return
 			} else {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
