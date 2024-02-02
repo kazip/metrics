@@ -29,6 +29,7 @@ func main() {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/update/counter/", handleCounterFunc(storage))
 	mux.HandleFunc("/update/gauge/", handleGaugeFunc(storage))
+	mux.HandleFunc("/update/", handleUnknownType)
 	err := http.ListenAndServe(config.ListenURI, mux)
 	if err != nil {
 		panic(err)

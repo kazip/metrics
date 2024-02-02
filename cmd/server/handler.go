@@ -31,6 +31,10 @@ func extractMetricAndValue(path string) (string, string, error) {
 	return metric, valueStr, nil
 }
 
+func handleUnknownType (w http.ResponseWriter, r *http.Request) {
+	http.Error(w, "Bad request", http.StatusBadRequest)
+}
+
 func handleCounterFunc(storage repository) func (w http.ResponseWriter, r *http.Request) {
 	return func (w http.ResponseWriter, r *http.Request) {
 
