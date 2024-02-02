@@ -1,0 +1,63 @@
+package main
+
+import (
+	"fmt"
+	"io"
+	"net/http"
+	"testing"
+	"time"
+
+	"github.com/stretchr/testify/assert"
+)
+
+type MockHttpClient struct {
+	Urls []string
+}
+
+func (m *MockHttpClient) Post (url string, contentType string, body io.Reader) (*http.Response, error) {
+	m.Urls = append(m.Urls, url)
+	fmt.Println(url)
+	return nil, nil
+}
+
+func TestNewSender(t *testing.T) {
+	type args struct {
+		duration int
+		metrics  *Metrics
+		done     chan bool
+		client   *MockHttpClient
+	}
+	tests := []struct {
+		name string
+		args args
+	}{
+		{
+			args: args {
+				duration: 1,
+				metrics: &Metrics{
+					gauges: []GaugeMetric {
+						{
+							name: "Alloc",
+							value: 1,
+						},
+					},
+				},
+				done: make(chan bool),
+				client: &MockHttpClient{
+					Urls: []string{},
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+
+			fmt.Println(tt.args.metrics.gauges)
+
+			go NewSender(tt.args.duration, tt.args.metrics, tt.args.done, tt.args.client)
+			time.Sleep(time.Duration(2) * time.Second)
+			tt.args.done <- true
+			assert.Equal(t, 2, len(tt.args.client.Urls))
+		})
+	}
+}
