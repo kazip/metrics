@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"net/http"
@@ -14,10 +15,14 @@ type MockHTTPClient struct {
 	Urls []string
 }
 
-func (m *MockHTTPClient) Post (url string, contentType string, body io.Reader) (*http.Response, error) {
+func (m *MockHTTPClient) Post(url string, contentType string, body io.Reader) (*http.Response, error) {
 	m.Urls = append(m.Urls, url)
 	fmt.Println(url)
-	return nil, nil
+	r := io.NopCloser(bytes.NewReader([]byte("ok!")))
+	return &http.Response{
+		StatusCode: 200,
+		Body:       r,
+	}, nil
 }
 
 func TestNewSender(t *testing.T) {
@@ -25,25 +30,25 @@ func TestNewSender(t *testing.T) {
 		duration int
 		metrics  *Metrics
 		done     chan bool
-		client   *MockHTTPClient
+		client   MockHTTPClient
 	}
 	tests := []struct {
 		name string
 		args args
 	}{
 		{
-			args: args {
+			args: args{
 				duration: 1,
 				metrics: &Metrics{
-					gauges: []GaugeMetric {
+					gauges: []GaugeMetric{
 						{
-							name: "Alloc",
+							name:  "Alloc",
 							value: 1,
 						},
 					},
 				},
 				done: make(chan bool),
-				client: &MockHTTPClient{
+				client: MockHTTPClient{
 					Urls: []string{},
 				},
 			},
@@ -54,10 +59,10 @@ func TestNewSender(t *testing.T) {
 
 			fmt.Println(tt.args.metrics.gauges)
 
-			go NewSender(tt.args.duration, tt.args.metrics, tt.args.done, tt.args.client)
+			go NewSender(tt.args.duration, tt.args.metrics, tt.args.done, &tt.args.client)
 			time.Sleep(time.Duration(2) * time.Second)
 			tt.args.done <- true
-			assert.Equal(t, 2, len(tt.args.client.Urls))
+			assert.Equal(t, 1, len(tt.args.client.Urls))
 		})
 	}
 }
