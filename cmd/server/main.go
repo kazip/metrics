@@ -24,7 +24,7 @@ func (e HandleError) Status() int {
 func main() {
 	
 	storage := NewMemStorage()
-	config := Config{ListenURI: ":8989"}
+	config := Config{ListenURI: ":8080"}
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/update/counter/", handleCounterFunc(storage))

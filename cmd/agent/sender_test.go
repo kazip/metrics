@@ -10,11 +10,11 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-type MockHttpClient struct {
+type MockHTTPClient struct {
 	Urls []string
 }
 
-func (m *MockHttpClient) Post (url string, contentType string, body io.Reader) (*http.Response, error) {
+func (m *MockHTTPClient) Post (url string, contentType string, body io.Reader) (*http.Response, error) {
 	m.Urls = append(m.Urls, url)
 	fmt.Println(url)
 	return nil, nil
@@ -25,7 +25,7 @@ func TestNewSender(t *testing.T) {
 		duration int
 		metrics  *Metrics
 		done     chan bool
-		client   *MockHttpClient
+		client   *MockHTTPClient
 	}
 	tests := []struct {
 		name string
@@ -43,7 +43,7 @@ func TestNewSender(t *testing.T) {
 					},
 				},
 				done: make(chan bool),
-				client: &MockHttpClient{
+				client: &MockHTTPClient{
 					Urls: []string{},
 				},
 			},
