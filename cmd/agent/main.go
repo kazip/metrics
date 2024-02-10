@@ -3,9 +3,11 @@ package main
 import (
 	"flag"
 	"fmt"
+	"log"
 	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
 	"sync"
 	"syscall"
 	"time"
@@ -20,6 +22,26 @@ func main() {
 	reportInterval := flag.Int("r", 10, "report interval")
 	serverAddress := flag.String("a", "localhost:8080", "server address")
 	flag.Parse()
+
+	if envServerAddress := os.Getenv("ADDRESS"); envServerAddress != "" {
+		serverAddress = &envServerAddress
+	}
+
+	if envReportInterval := os.Getenv("REPORT_INTERVAL"); envReportInterval != "" {
+		interval, err := strconv.Atoi(envReportInterval)
+		if err != nil {
+			log.Fatal(err)
+		}
+		*reportInterval = interval
+	}
+
+	if envPollInterval := os.Getenv("POLL_INTERVAL"); envPollInterval != "" {
+		interval, err := strconv.Atoi(envPollInterval)
+		if err != nil {
+			log.Fatal(err)
+		}
+		*pollInterval = interval
+	}
 
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
