@@ -73,6 +73,18 @@ func Test_router(t *testing.T) {
 		{
 			name: "test counter metric not found",
 			want: want{
+				code:        http.StatusBadRequest,
+				response:    "Bad request\n",
+				contentType: "text/plain; charset=utf-8",
+			},
+			args: args{
+				method: http.MethodPost,
+				uri:    "/update/unknown/testCounter/100",
+			},
+		},
+		{
+			name: "test counter metric not found",
+			want: want{
 				code:        http.StatusNotFound,
 				response:    "Invalid metrics\n",
 				contentType: "text/plain; charset=utf-8",

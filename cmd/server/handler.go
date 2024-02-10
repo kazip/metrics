@@ -16,11 +16,11 @@ func Router(storage repository) chi.Router {
 		r.Post("/gauge/{metric}", handleInvalidRequest)
 		r.Post("/counter/", handleUnknownMetric)
 		r.Post("/gauge/", handleUnknownMetric)
-		r.Post("/{type}", handleUnknownType)
+		r.Post("/{type}/*", handleUnknownType)
 	})
 
 	r.Get("/value/{metric_type}/{metric}", handleMetricValueFunc(storage))
-	r.Get("/", handleHtmlMetricFunc(storage))
+	r.Get("/", handleHTMLMetricFunc(storage))
 
 	return r
 }
@@ -37,7 +37,7 @@ func handleInvalidRequest(w http.ResponseWriter, r *http.Request) {
 	http.Error(w, "Invalid request", http.StatusBadRequest)
 }
 
-func handleHtmlMetricFunc(storage repository) func(w http.ResponseWriter, r *http.Request) {
+func handleHTMLMetricFunc(storage repository) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		gauges := storage.GetGauges()
 		counters := storage.GetCounters()
