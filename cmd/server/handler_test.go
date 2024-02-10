@@ -175,7 +175,7 @@ func Test_router(t *testing.T) {
 			},
 			args: args{
 				method: http.MethodPost,
-				uri:    "/update/gauge/100/1",
+				uri:    "/update/gauge/100/1.123",
 			},
 		},
 		{
@@ -194,7 +194,7 @@ func Test_router(t *testing.T) {
 			name: "test get gauge ok",
 			want: want{
 				code:        http.StatusOK,
-				response:    "1.000000",
+				response:    "1.123",
 				contentType: "text/plain; charset=utf-8",
 			},
 			args: args{

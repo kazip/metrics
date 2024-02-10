@@ -47,7 +47,7 @@ func handleHTMLMetricFunc(storage repository) func(w http.ResponseWriter, r *htt
 		html += "<h2>Gauges</h2>"
 		html += "<table><tr><th>Metric</th><th>Value</th></tr>"
 		for k, v := range gauges {
-			html += fmt.Sprintf("<tr><td>%s</td><td>%f</td></tr>", k, v)
+			html += fmt.Sprintf("<tr><td>%s</td><td>%g</td></tr>", k, v)
 		}
 
 		html += "</table>"
@@ -96,7 +96,7 @@ func handleMetricValueFunc(storage repository) func(w http.ResponseWriter, r *ht
 				w.Write([]byte(err.Error()))
 			} else {
 				w.WriteHeader(http.StatusOK)
-				w.Write([]byte(fmt.Sprintf("%f", value)))
+				w.Write([]byte(fmt.Sprintf("%g", value)))
 			}
 
 			return
@@ -138,7 +138,7 @@ func handleGaugeFunc(storage repository) func(w http.ResponseWriter, r *http.Req
 		}
 
 		storage.SetGauge(metric, value)
-		fmt.Printf("Set gauge: %s = %f\n", metric, value)
+		fmt.Printf("Set gauge: %s = %g\n", metric, value)
 		w.WriteHeader(http.StatusOK)
 	}
 }
