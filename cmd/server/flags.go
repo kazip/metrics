@@ -6,9 +6,7 @@ import (
 )
 
 type Config struct {
-	PollInterval   int
-	ReportInterval int
-	ListenURI      string
+	ListenURI string
 }
 
 func parseFlags(config *Config) {
