@@ -8,6 +8,10 @@ import (
 type repository interface {
 	SetGauge(name string, value float64) error
 	SetCounter(name string, value int64) error
+	GetGauge(name string) (float64, error)
+	GetCounter(name string) (int64, error)
+	GetCounters() map[string]int64
+	GetGauges() map[string]float64
 }
 
 type MemStorage struct {
@@ -15,6 +19,38 @@ type MemStorage struct {
 	CounterMutex sync.RWMutex
 	Gauges       map[string]float64
 	Counters     map[string]int64
+}
+
+func (m *MemStorage) GetGauges() map[string]float64 {
+	m.GaugeMutex.RLock()
+	gauges := m.Gauges
+	m.GaugeMutex.RUnlock()
+
+	return gauges
+}
+
+func (m *MemStorage) GetCounters() map[string]int64 {
+	m.CounterMutex.RLock()
+	counters := m.Counters
+	m.CounterMutex.RUnlock()
+
+	return counters
+}
+
+func (m *MemStorage) GetGauge(name string) (float64, error) {
+	m.GaugeMutex.RLock()
+	value := m.Gauges[name]
+	m.GaugeMutex.RUnlock()
+
+	return value, nil
+}
+
+func (m *MemStorage) GetCounter(name string) (int64, error) {
+	m.CounterMutex.RLock()
+	value := m.Counters[name]
+	m.CounterMutex.RUnlock()
+
+	return value, nil
 }
 
 func (m *MemStorage) SetGauge(name string, value float64) error {

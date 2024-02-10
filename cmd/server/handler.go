@@ -2,110 +2,131 @@ package main
 
 import (
 	"fmt"
+	"github.com/go-chi/chi/v5"
 	"net/http"
 	"strconv"
-	"strings"
 )
 
-func splitFragments(path string) []string {
-	path, _ = strings.CutPrefix(path, "/")
-	return strings.Split(path, "/")
+func Router(storage repository) chi.Router {
+	r := chi.NewRouter()
+	r.Route("/update", func(r chi.Router) {
+		r.Post("/counter/{metric}/{value}", handleCounterFunc(storage))
+		r.Post("/gauge/{metric}/{value}", handleGaugeFunc(storage))
+		r.Post("/counter/{metric}", handleInvalidRequest)
+		r.Post("/gauge/{metric}", handleInvalidRequest)
+		r.Post("/counter/", handleUnknownMetric)
+		r.Post("/gauge/", handleUnknownMetric)
+		r.Post("/{type}", handleUnknownType)
+	})
+
+	r.Get("/value/{metric_type}/{metric}", handleMetricValueFunc(storage))
+	r.Get("/", handleHtmlMetricFunc(storage))
+
+	return r
 }
 
-func extractMetricAndValue(path string) (string, string, error) {
-
-	fragments := splitFragments(path)
-
-	if len(fragments) != 2 {
-		return "", "", HandleError{"Invalid request", http.StatusBadRequest}
-	}
-
-	metric := fragments[0]
-
-	if metric == "" {
-		return "", "", HandleError{"Please specify metric name", http.StatusNotFound}
-	}
-
-	valueStr := fragments[1]
-
-	return metric, valueStr, nil
-}
-
-func handleUnknownType (w http.ResponseWriter, r *http.Request) {
+func handleUnknownType(w http.ResponseWriter, r *http.Request) {
 	http.Error(w, "Bad request", http.StatusBadRequest)
 }
 
-func handleCounterFunc(storage repository) func (w http.ResponseWriter, r *http.Request) {
-	return func (w http.ResponseWriter, r *http.Request) {
+func handleUnknownMetric(w http.ResponseWriter, r *http.Request) {
+	http.Error(w, "Invalid metrics", http.StatusNotFound)
+}
 
-		if r.Method != http.MethodPost {
-			http.Error(w, "Method not Allowed", http.StatusMethodNotAllowed)
+func handleInvalidRequest(w http.ResponseWriter, r *http.Request) {
+	http.Error(w, "Invalid request", http.StatusBadRequest)
+}
+
+func handleHtmlMetricFunc(storage repository) func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		gauges := storage.GetGauges()
+		counters := storage.GetCounters()
+
+		html := "<html><head><title>Metric list</title><head><body>"
+		html += "<h1>All metrics</h1>"
+		html += "<h2>Gauges</h2>"
+		html += "<table><tr><th>Metric</th><th>Value</th></tr>"
+		for k, v := range gauges {
+			html += fmt.Sprintf("<tr><td>%s</td><td>%f</td></tr>", k, v)
+		}
+
+		html += "</table>"
+
+		html += "<h2>Counters</h2>"
+		html += "<table><tr><th>Metric</th><th>Value</th></tr>"
+		for k, v := range counters {
+			html += fmt.Sprintf("<tr><td>%s</td><td>%d</td></tr>", k, v)
+		}
+		html += "</table>"
+		html += "</body></html>"
+
+		w.Write([]byte(html))
+		w.WriteHeader(http.StatusOK)
+
+	}
+}
+
+func handleMetricValueFunc(storage repository) func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+
+		metricType := chi.URLParam(r, "metric_type")
+
+		if metricType != "counter" && metricType != "gauge" {
+			http.Error(w, "Not Found", http.StatusNotFound)
 			return
 		}
-	
-		path, _ := strings.CutPrefix(r.URL.Path, "/update/counter/")
-		if path == "" {
-			http.Error(w, "Invalid metrics", http.StatusNotFound)
+
+		metric := chi.URLParam(r, "metric")
+		if metricType == "counter" {
+			value, _ := storage.GetCounter(metric)
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte(fmt.Sprintf("%d", value)))
 			return
 		}
-	
-		metric, valueStr, err := extractMetricAndValue(path)
-		if err != nil {
-			if err1, ok := err.(HandleError); ok {
-				http.Error(w, err1.Error(), err1.Status())
-				return
-			} else {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				return
-			}
+
+		if metricType == "gauge" {
+			value, _ := storage.GetGauge(metric)
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte(fmt.Sprintf("%f", value)))
+			return
 		}
-	
+
+	}
+}
+
+func handleCounterFunc(storage repository) func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+
+		metric := chi.URLParam(r, "metric")
+		valueStr := chi.URLParam(r, "value")
+
 		value, err := strconv.ParseInt(valueStr, 10, 64)
-	
+
 		if err != nil {
-			http.Error(w, "Invalid parameter value", http.StatusBadRequest)
+			http.Error(w, fmt.Sprintf("Invalid parameter value %s", r.URL.Path), http.StatusBadRequest)
 			return
 		}
-			
+
 		storage.SetCounter(metric, value)
 		fmt.Printf("Set counter: %s = %d\n", metric, value)
 		w.WriteHeader(http.StatusOK)
 	}
 }
 
-func handleGaugeFunc(storage repository) func (w http.ResponseWriter, r *http.Request) {
-	return func (w http.ResponseWriter, r *http.Request) {
+func handleGaugeFunc(storage repository) func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
 
-		if r.Method != http.MethodPost {
-			http.Error(w, "Method not Allowed", http.StatusMethodNotAllowed)
-			return
-		}
-		
-		path, _ := strings.CutPrefix(r.URL.Path, "/update/gauge/")
-		if path == "" {
-			http.Error(w, "Invalid metrics", http.StatusNotFound)
-			return
-		}
-	
-		metric, valueStr, err := extractMetricAndValue(path)
-		if err != nil {
-			if err1, ok := err.(HandleError); ok {
-				http.Error(w, err1.Error(), err1.Status())
-				return
-			} else {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				return
-			}
-		}
-	
+		metric := chi.URLParam(r, "metric")
+		valueStr := chi.URLParam(r, "value")
+
 		value, err := strconv.ParseFloat(valueStr, 64)
-	
+
 		if err != nil {
 			http.Error(w, "Invalid parameter value", http.StatusBadRequest)
 			return
 		}
-		
-		storage.SetGauge(metric, value)	
+
+		storage.SetGauge(metric, value)
 		fmt.Printf("Set gauge: %s = %f\n", metric, value)
 		w.WriteHeader(http.StatusOK)
 	}

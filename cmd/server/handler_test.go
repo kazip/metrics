@@ -10,8 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func Test_handleCounter(t *testing.T) {
-
+func Test_router(t *testing.T) {
 	type want struct {
 		code        int
 		response    string
@@ -28,19 +27,51 @@ func Test_handleCounter(t *testing.T) {
 		args args
 	}{
 		{
-			name: "test 1",
+			name: "test empty metric list",
+			want: want{
+				code:        http.StatusOK,
+				response:    "<html><head><title>Metric list</title><head><body><h1>All metrics</h1><h2>Gauges</h2><table><tr><th>Metric</th><th>Value</th></tr></table><h2>Counters</h2><table><tr><th>Metric</th><th>Value</th></tr></table></body></html>",
+				contentType: "text/html; charset=utf-8",
+			},
+		},
+		{
+			name: "test invalid method options",
 			want: want{
 				code:        http.StatusMethodNotAllowed,
-				response:    "Method not Allowed\n",
-				contentType: "text/plain; charset=utf-8",
+				response:    "",
+				contentType: "",
 			},
 			args: args{
-				method: http.MethodGet,
+				method: http.MethodOptions,
 				uri:    "/",
 			},
 		},
 		{
-			name: "test metric not found",
+			name: "test invalid method patch",
+			want: want{
+				code:        http.StatusMethodNotAllowed,
+				response:    "",
+				contentType: "",
+			},
+			args: args{
+				method: http.MethodPatch,
+				uri:    "/",
+			},
+		},
+		{
+			name: "test invalid method put",
+			want: want{
+				code:        http.StatusMethodNotAllowed,
+				response:    "",
+				contentType: "",
+			},
+			args: args{
+				method: http.MethodPut,
+				uri:    "/",
+			},
+		},
+		{
+			name: "test counter metric not found",
 			want: want{
 				code:        http.StatusNotFound,
 				response:    "Invalid metrics\n",
@@ -52,7 +83,7 @@ func Test_handleCounter(t *testing.T) {
 			},
 		},
 		{
-			name: "test invalid request",
+			name: "test counter invalid request",
 			want: want{
 				code:        http.StatusBadRequest,
 				response:    "Invalid request\n",
@@ -64,7 +95,7 @@ func Test_handleCounter(t *testing.T) {
 			},
 		},
 		{
-			name: "test ok",
+			name: "test set counter ok",
 			want: want{
 				code:        http.StatusOK,
 				response:    "",
@@ -75,97 +106,8 @@ func Test_handleCounter(t *testing.T) {
 				uri:    "/update/counter/100/1",
 			},
 		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-
-			request := httptest.NewRequest(tt.args.method, tt.args.uri, nil)
-			storage := NewMemStorage()
-			w := httptest.NewRecorder()
-
-			handler := handleCounterFunc(storage)
-			handler(w, request)
-			res := w.Result()
-
-			defer res.Body.Close()
-			resBody, err := io.ReadAll(res.Body)
-			require.NoError(t, err)
-
-			assert.Equal(t, tt.want.code, res.StatusCode)
-			assert.Equal(t, tt.want.contentType, res.Header.Get("Content-Type"))
-			assert.Equal(t, tt.want.response, string(resBody))
-		})
-	}
-
-}
-
-func Test_handleGauge(t *testing.T) {
-
-	type want struct {
-		code        int
-		response    string
-		contentType string
-	}
-
-	type args struct {
-		method string
-		uri    string
-	}
-	tests := []struct {
-		name string
-		want want
-		args args
-	}{
 		{
-			name: "test invalid method get",
-			want: want{
-				code:        http.StatusMethodNotAllowed,
-				response:    "Method not Allowed\n",
-				contentType: "text/plain; charset=utf-8",
-			},
-			args: args{
-				method: http.MethodGet,
-				uri:    "/",
-			},
-		},
-		{
-			name: "test invalid method options",
-			want: want{
-				code:        http.StatusMethodNotAllowed,
-				response:    "Method not Allowed\n",
-				contentType: "text/plain; charset=utf-8",
-			},
-			args: args{
-				method: http.MethodOptions,
-				uri:    "/",
-			},
-		},
-		{
-			name: "test invalid method patch",
-			want: want{
-				code:        http.StatusMethodNotAllowed,
-				response:    "Method not Allowed\n",
-				contentType: "text/plain; charset=utf-8",
-			},
-			args: args{
-				method: http.MethodPatch,
-				uri:    "/",
-			},
-		},
-		{
-			name: "test invalid method put",
-			want: want{
-				code:        http.StatusMethodNotAllowed,
-				response:    "Method not Allowed\n",
-				contentType: "text/plain; charset=utf-8",
-			},
-			args: args{
-				method: http.MethodPut,
-				uri:    "/",
-			},
-		},
-		{
-			name: "test metric not found",
+			name: "test gauge metric not found",
 			want: want{
 				code:        http.StatusNotFound,
 				response:    "Invalid metrics\n",
@@ -177,7 +119,7 @@ func Test_handleGauge(t *testing.T) {
 			},
 		},
 		{
-			name: "test bad request",
+			name: "test gauge bad request",
 			want: want{
 				code:        http.StatusBadRequest,
 				response:    "Invalid request\n",
@@ -189,7 +131,7 @@ func Test_handleGauge(t *testing.T) {
 			},
 		},
 		{
-			name: "test ok",
+			name: "test set gauge ok",
 			want: want{
 				code:        http.StatusOK,
 				response:    "",
@@ -201,15 +143,21 @@ func Test_handleGauge(t *testing.T) {
 			},
 		},
 	}
+
+	storage := NewMemStorage()
+	testServer := httptest.NewServer(Router(storage))
+	defer testServer.Close()
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			storage := NewMemStorage()
-			request := httptest.NewRequest(tt.args.method, tt.args.uri, nil)
 
-			w := httptest.NewRecorder()
-			handler := handleGaugeFunc(storage)
-			handler(w, request)
-			res := w.Result()
+			request, _ := http.NewRequest(tt.args.method, testServer.URL+tt.args.uri, nil)
+			t.Log(testServer.URL + tt.args.uri)
+
+			res, err := http.DefaultClient.Do(request)
+			if err != nil {
+				t.Fatal(err)
+			}
 
 			defer res.Body.Close()
 			resBody, err := io.ReadAll(res.Body)
