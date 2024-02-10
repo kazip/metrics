@@ -11,8 +11,8 @@ type MemStatsReader interface {
 	Read(*runtime.MemStats)
 }
 
-func NewMonitor(duration int, metrics *Metrics, done <-chan bool, reader MemStatsReader) {
-	var interval = time.Duration(duration) * time.Second
+func NewMonitor(pollInterval int, metrics *Metrics, done <-chan bool, reader MemStatsReader) {
+	var interval = time.Duration(pollInterval) * time.Second
 	var pollCount int64 = 0
 	var rtm runtime.MemStats
 

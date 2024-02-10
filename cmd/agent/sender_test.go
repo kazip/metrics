@@ -59,7 +59,7 @@ func TestNewSender(t *testing.T) {
 
 			fmt.Println(tt.args.metrics.gauges)
 
-			go NewSender(tt.args.duration, tt.args.metrics, tt.args.done, &tt.args.client)
+			go NewSender(tt.args.duration, "localhost:8080", tt.args.metrics, tt.args.done, &tt.args.client)
 			time.Sleep(time.Duration(1500) * time.Millisecond)
 			tt.args.done <- true
 			assert.Equal(t, 1, len(tt.args.client.Urls))

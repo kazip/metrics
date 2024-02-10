@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"net/http"
 	"os"
@@ -14,6 +15,11 @@ var mutex sync.RWMutex = sync.RWMutex{}
 
 func main() {
 	var wg sync.WaitGroup
+
+	pollInterval := flag.Int("p", 2, "poll interval")
+	reportInterval := flag.Int("r", 10, "report interval")
+	serverAddress := flag.String("a", "localhost:8080", "server address")
+	flag.Parse()
 
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
@@ -36,14 +42,14 @@ func main() {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		NewMonitor(1, metrics, doneMonitor, &MemStats{})
+		NewMonitor(*pollInterval, metrics, doneMonitor, &MemStats{})
 		fmt.Println("Shutdown monitor")
 	}()
 
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		NewSender(2, metrics, doneSender, &http.Client{Timeout: time.Duration(1) * time.Second})
+		NewSender(*reportInterval, *serverAddress, metrics, doneSender, &http.Client{Timeout: time.Duration(1) * time.Second})
 		fmt.Println("Shutdown sender")
 	}()
 
