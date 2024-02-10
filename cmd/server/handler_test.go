@@ -119,6 +119,30 @@ func Test_router(t *testing.T) {
 			},
 		},
 		{
+			name: "test get counter not found",
+			want: want{
+				code:        http.StatusNotFound,
+				response:    "unknown counter metric",
+				contentType: "text/plain; charset=utf-8",
+			},
+			args: args{
+				method: http.MethodGet,
+				uri:    "/value/counter/1001",
+			},
+		},
+		{
+			name: "test get counter ok",
+			want: want{
+				code:        http.StatusOK,
+				response:    "1",
+				contentType: "text/plain; charset=utf-8",
+			},
+			args: args{
+				method: http.MethodGet,
+				uri:    "/value/counter/100",
+			},
+		},
+		{
 			name: "test gauge metric not found",
 			want: want{
 				code:        http.StatusNotFound,
@@ -152,6 +176,30 @@ func Test_router(t *testing.T) {
 			args: args{
 				method: http.MethodPost,
 				uri:    "/update/gauge/100/1",
+			},
+		},
+		{
+			name: "test get gauge not found",
+			want: want{
+				code:        http.StatusNotFound,
+				response:    "unknown gauge metric",
+				contentType: "text/plain; charset=utf-8",
+			},
+			args: args{
+				method: http.MethodGet,
+				uri:    "/value/gauge/1001",
+			},
+		},
+		{
+			name: "test get gauge ok",
+			want: want{
+				code:        http.StatusOK,
+				response:    "1.000000",
+				contentType: "text/plain; charset=utf-8",
+			},
+			args: args{
+				method: http.MethodGet,
+				uri:    "/value/gauge/100",
 			},
 		},
 	}

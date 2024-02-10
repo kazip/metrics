@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"fmt"
 	"sync"
 )
 
@@ -39,17 +40,23 @@ func (m *MemStorage) GetCounters() map[string]int64 {
 
 func (m *MemStorage) GetGauge(name string) (float64, error) {
 	m.GaugeMutex.RLock()
-	value := m.Gauges[name]
+	value, ok := m.Gauges[name]
 	m.GaugeMutex.RUnlock()
 
+	if !ok {
+		return 0, fmt.Errorf("unknown gauge metric")
+	}
 	return value, nil
 }
 
 func (m *MemStorage) GetCounter(name string) (int64, error) {
 	m.CounterMutex.RLock()
-	value := m.Counters[name]
+	value, ok := m.Counters[name]
 	m.CounterMutex.RUnlock()
 
+	if !ok {
+		return 0, fmt.Errorf("unknown counter metric")
+	}
 	return value, nil
 }
 

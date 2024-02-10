@@ -78,16 +78,27 @@ func handleMetricValueFunc(storage repository) func(w http.ResponseWriter, r *ht
 
 		metric := chi.URLParam(r, "metric")
 		if metricType == "counter" {
-			value, _ := storage.GetCounter(metric)
-			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(fmt.Sprintf("%d", value)))
+			value, err := storage.GetCounter(metric)
+			if err != nil {
+				w.WriteHeader(http.StatusNotFound)
+				w.Write([]byte(err.Error()))
+			} else {
+				w.WriteHeader(http.StatusOK)
+				w.Write([]byte(fmt.Sprintf("%d", value)))
+			}
 			return
 		}
 
 		if metricType == "gauge" {
-			value, _ := storage.GetGauge(metric)
-			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(fmt.Sprintf("%f", value)))
+			value, err := storage.GetGauge(metric)
+			if err != nil {
+				w.WriteHeader(http.StatusNotFound)
+				w.Write([]byte(err.Error()))
+			} else {
+				w.WriteHeader(http.StatusOK)
+				w.Write([]byte(fmt.Sprintf("%f", value)))
+			}
+
 			return
 		}
 
